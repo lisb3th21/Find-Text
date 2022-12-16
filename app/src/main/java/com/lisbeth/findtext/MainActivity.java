@@ -14,6 +14,7 @@ import android.widget.Toast;
 
 import com.google.android.material.textfield.TextInputEditText;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -21,6 +22,8 @@ import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 
@@ -78,7 +81,7 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(String result) {
 
             String words = result;
-
+            String text= textFind.getText().toString();
 
             textView.setText(words);
         }
@@ -88,7 +91,7 @@ public class MainActivity extends AppCompatActivity {
 
     public String downloadUrl(String myurl) throws IOException {
         InputStream is = null;
-        int len = 50000;
+        int len = 1900000;
 
         try {
             URL url = new URL(myurl);
@@ -112,14 +115,48 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+    public  String getSentence(String text, String word) {
+        String sentence = "";
+        if (text.toLowerCase().contains(word)) {
+            if (text.contains(".")) {  //Are there sentences terminating in a period?
+                int loc = text.toLowerCase().indexOf(word);
+                int a = loc;
+                while (a >= 0) {
+                    if (text.charAt(a) == '.' || a == 0) {
+                        sentence = text.substring(a,loc);
+                        a = 0;
+                    }
+                    a--;
+                }
+                a = loc + word.length();
+                while (a <= text.length()) {
+                    if (text.charAt(a) == '.' || a == text.length()) {
+                        sentence += text.substring(loc,a+1);
+                        a = text.length()+1;
+                    }
+                    a++;
+                }
+                return sentence;
+            } else {
+                return text;      //If no period, return full text
+            }
+        } else {
+            return null;
+        }
+    }
 
     public String readIt(InputStream stream, int len) throws IOException, UnsupportedEncodingException {
-        Reader reader = null;
-        reader = new InputStreamReader(stream, "UTF-8");
-        char[] buffer = new char[len];
-        reader.read(buffer);
+        StringBuilder textBuilder = new StringBuilder();
+        try (Reader reader = new BufferedReader(new InputStreamReader
+                (stream, Charset.forName(StandardCharsets.UTF_8.name())))) {
+            int c = 0;
+            while ((c = reader.read()) != -1) {
+                textBuilder.append((char) c);
+            }
+        }
+        String result =textBuilder.toString().replaceAll("\\<.*?\\>", "");
+    return getSentence(result, textFind.getText().toString()).replaceAll("\n+", "");
 
-        return new String(buffer);
     }
 
 }
